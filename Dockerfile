@@ -1,29 +1,21 @@
-# Use a Maven image as the base
-FROM maven:3.8.4-openjdk-8-slim AS maven_build
+FROM maven:latest AS maven_build
 
-# Set the working directory
-WORKDIR /app
+COPY pom.xml /tmp/
 
-# Copy the Maven POM file
-COPY pom.xml .
+COPY src /tmp/src/
 
-# Resolve Maven dependencies (this step can be cached if the pom.xml hasn't changed)
-RUN mvn dependency:go-offline
+WORKDIR /tmp/
 
-# Copy the source code
-COPY src ./src
+RUN mvn package
 
-# Build the application
-RUN mvn package -DskipTests
+#pull base image
 
-# Create a final lightweight image
-FROM openjdk:8-jre-slim
+FROM openjdk
 
-# Set the working directory
-WORKDIR /app
+EXPOSE 8080
 
-# Copy the built JAR file from the Maven build stage
-COPY --from=maven_build /app/target/sample-1.0.3.jar .
+#copy hello world to docker image from builder image
+COPY --from=maven_build /tmp/target/sample-1.0.3.jar /data/sample-1.0.3.jar
 
-# Set the entry point to run the application
-CMD ["java", "-jar", "sample-1.0.3.jar"]
+#default command
+CMD ["java", "-jar", "/data/sample-1.0.3.jar"]
